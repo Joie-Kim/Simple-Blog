@@ -78,8 +78,15 @@ export const list = async (ctx) => {
     return;
   }
 
+  const { tag, username } = ctx.query;
+  // tag, username 값이 유효하면 객체 안에 넣고, 그렇지 않으면 넣지 않음
+  const query = {
+    ...(username ? { 'user.username': username } : {}),
+    ...(tag ? { tags: tag } : {}),
+  };
+
   try {
-    const posts = await Post.find()
+    const posts = await Post.find(query)
       .sort({ _id: -1 }) // 가장 최근 게시물이 위에 있도록 하기 위해 id를 기준으로 내림차순 정렬
       .limit(10) // 한 페이지에 보이는 게시물의 개수를 제한
       .skip((page - 1) * 10) // page가 달라질 때마다 다음 데이터 불러옴
@@ -89,13 +96,11 @@ export const list = async (ctx) => {
     // 마지막 페이지 조회 (커스텀 헤더 설정)
     const postCount = await Post.countDocuments().exec();
     ctx.set('Last-Page', Math.ceil(postCount / 10));
-    ctx.body = posts
-      //.map((post) => post.toJSON())
-      .map((post) => ({
-        ...post,
-        body:
-          post.body.length < 200 ? post.body : `${post.body.slice(0, 200)}...`,
-      }));
+    ctx.body = posts.map((post) => ({
+      ...post,
+      body:
+        post.body.length < 200 ? post.body : `${post.body.slice(0, 200)}...`,
+    }));
   } catch (e) {
     ctx.throw(500, e);
   }
